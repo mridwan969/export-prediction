@@ -1,6 +1,6 @@
 # export-prediction
 
-**How to deploy Tensorflow API to Google Cloud Platform**
+**How to deploy API to Google Cloud Platform**
 
 Login to Google Cloud Platform
 
@@ -66,7 +66,7 @@ Login to Google Cloud Platform
     Go to repository and confirm that the image has been connected to the repository.
     
 
-That's all the steps for deploying the Tensorflow API.
+That's all the steps for deploying the API.
 
 
 
