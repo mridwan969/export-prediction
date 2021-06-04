@@ -1,6 +1,6 @@
 # export-prediction
 
-**How to deploy API to Google Cloud Platform**
+**How to deploy the Flask API and the ML model to Google Cloud Platform**
 
 Login to Google Cloud Platform
 
@@ -66,7 +66,135 @@ Login to Google Cloud Platform
     Go to repository and confirm that the image has been connected to the repository.
     
 
-That's all the steps for deploying the API.
+**How to deploy the Laravel API to Google Cloud Platform**
 
+1. Login to Google Cloud Platform and Activate Cloud Shell
 
+2. Clone the laravel api repository with the command:
+    $ git clone https://github.com/gungdekrisna/Expert-API.git
+    
+    then go to the directory with:
+    $ cd Expert-API
+
+3. In the directory create a Dockerfile and a folder named docker:
+    $ nano Dockerfile
+    and paste the following to the file:
+    
+FROM composer:1.9.0 as build
+WORKDIR /app
+COPY . /app
+RUN composer global require hirak/prestissimo && composer install
+
+FROM php:7.3-apache-stretch
+RUN docker-php-ext-install pdo pdo_mysql
+
+EXPOSE 8080
+COPY --from=build /app /var/www/
+COPY docker/000-default.conf /etc/apache2/sites-available/000-default.conf
+COPY .env.example /var/www/.env
+RUN chmod 777 -R /var/www/storage/ && \
+    echo "Listen 8080" >> /etc/apache2/ports.conf && \
+    chown -R www-data:www-data /var/www/ && \
+    a2enmod rewrite
+    
+    
+    create docker folder then immediately go to the directory:
+    $ mkdir docker
+    then navigate to the folder to create two files:
+    $ nano 000-default.conf
+    then paste the following:
+<VirtualHost *:8080>
+
+  ServerAdmin webmaster@localhost
+  DocumentRoot /var/www/public/
+
+  <Directory /var/www/>
+    AllowOverride All
+    Require all granted
+  </Directory>
+
+  ErrorLog ${APACHE_LOG_DIR}/error.log
+  CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+</VirtualHost>
+
+    create another file:
+    $ nano docker-compose.yml
+    then paste:
+version: '3'
+services:
+  app:
+    build:
+      context: ./
+    volumes:
+      - .:/var/www
+    ports:
+      - "8080:8080"
+
+4. For the next part, go to Navigation Menu > Cloud Storage and create a bucket with all settings as default then upload the db_expert.sql file from this repositories to the bucket
+5. Navigate to Navigation Menu > SQL > Create Instance > MySQL
+    Customize the instance with :
+    - Standard Machine : 1 vCPU, 3.75 GB
+    - Storage : SSD
+    - Storage Capacity : 10GB
+    - Connection : Enable both Private and Public IP
+    Then create the database
+   
+    After Creating the database, go to the newly created instance and choose Import, then choose the database bucket then leave everything to default
+    Click Import
+    
+6. Go back to Cloud shell to and go to the root directory of the cloned repository then paste this command:
+    $ nano .env.example
+    and change the file to resemble this:
+    APP_NAME=Laravel
+APP_ENV=local
+APP_KEY=base64:DJkdj8L5Di3rUkUOwmBFCrr5dsIYU/s7s+W52ClI4AA=
+APP_DEBUG=true
+APP_URL=http://localhost
+
+LOG_CHANNEL=stack
+LOG_LEVEL=debug
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=db_expert
+DB_USERNAME=root
+DB_PASSWORD=[DB_PASSWORD]
+
+     then save the file
+     
+7. Go to Navigation Menu > VPC Networks > Serverless VPC Access > Create Connector
+    - Choose a name and the region 
+    - Set network to default
+    - Subnet, Custom IP range and add 10.8.0.0
+    - instance-type : f1-micro
+    - 
+9. In the root directory paste this command to build the image:
+    $ docker build -t asia.gcr.io/PROJECT_ID/IMAGE_NAME:IMAGE_TAG .
+    
+    after the process done, push the image with the command:
+    $ docker push asia.gcr.io/PROJECT_ID/IMAGE_NAME:IMAGE_TAG
+    
+    When the push is done, go to Navigation Menu > Container Registry > Images then select the newly pushed image.
+
+    Click the three dots at the end of the image then choose which services do you want to deploy your image, in our case we decided to use Cloud Run since we can use continous     deployment for our API and choose deploy to Cloud Run.
+    
+ 10. In the Cloud Run:
+    - Choose a name and the region, then next
+    - Confirm the Image, then go to Advanced settings
+    - In the Variables & Secrets, ADD VARIABLE:
+        DB_CONNECTION=mysql
+        DB_HOST=127.0.0.1
+        DB_PORT=3306
+        DB_DATABASE=db_expert
+        DB_USERNAME=root
+        DB_PASSWORD=[DB_INSTANCE]
+     - In the Connectioon, ADD CONNECTION and choose the database, then select the VPC Connector and next
+     - Check Allow Unaunthenticated invocations
+     - CREATE
+
+  That's all the steps to deploy the Laravel API to Google Cloud Platform
+    
+  
 
